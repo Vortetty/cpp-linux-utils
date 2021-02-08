@@ -1,3 +1,6 @@
+#include "include/rang.hpp"
+#include "include/rang-colorblind.hpp"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
@@ -6,8 +9,6 @@
 #include "readFile.hpp"
 #include "dirList.hpp"
 #include "include/cxxopts.hpp"
-#include "include/rang.hpp"
-#include "include/rang-colorblind.hpp"
 
 void print(std::string string, std::string color){
     std::cout << string << "\n";
@@ -18,13 +19,16 @@ void print(std::string string){
 }
 
 int main(int argc, char *argv[]) {
-    cxxopts::Options options("ft", "File tools, can do various file operations through bash");
+    std::cout << rang::fg::reset;
+    cxxopts::Options options(argv[0], "File tools, can do various file operations through bash, defaults to an ls alternative!");
+    options.allow_unrecognised_options();
 
     options.add_options()
+        ("h,help", "Shows this help menu")
         ("r,read", "Read file to console")
-        ("l,list", "List directory to console")
-        ("f,file", "File name", cxxopts::value<std::string>()->default_value(""))
-        ("m,format", "File format for reading, valid values are: utf8, and utf16", cxxopts::value<std::string>()->default_value(""))
+        ("l,list", "List directory to console, default")
+        ("f,file", "File name, defaults to \".\"", cxxopts::value<std::string>()->default_value("."))
+        ("m,format", "File format for reading, valid values are: utf8, and utf16", cxxopts::value<std::string>()->default_value("utf8"))
         ("v,verbose", "Verbose output")
         ("c,credits", "Lists creators and used libs")
         ("p,perms", "Used to enable showing file perms, disabled by default as the check is relative to the perms of this file not if you can execute them")
@@ -33,6 +37,13 @@ int main(int argc, char *argv[]) {
     ;
 
     auto result = options.parse(argc, argv);
+
+    bool h = result["help"].as<bool>();
+    if (h){
+        std::cout << options.help();
+        return 0;
+    }
+
 
     bool verbose = result["verbose"].as<bool>();
     std::string file = result["file"].as<std::string>();
@@ -47,17 +58,25 @@ int main(int argc, char *argv[]) {
         print("File must be defined with -f <filename>");
         return EINVAL;
     }
-    else if(!list && !read){
-        print("-l or -r must be used");
-        return EINVAL;
-    }
     else if(list && read){
         print("Cannot list and read file");
         return EINVAL;
     }
     
-    if(list){
-        listDir(file, p, s, b);
+    if(list || !read){
+        try {
+            listDir(file, p, s, b, verbose);
+        } catch (...) {
+            if(m != ""){
+                try {
+                    readFile(file, p, s, b, m);
+                } catch(...) {
+                    std::cout << "File was not a directory and could not be read as a text file";
+                }
+            } else {
+                std::cout << "File was not a directory and no encoding was specified";
+            }
+        }
     }
     else if(read){
         if(m != ""){

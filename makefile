@@ -2,7 +2,7 @@ CC=g++
 CFLAGS=-I. -std=gnu++17
 
 FILES=src/main.cpp
-OUT=ft
+OUT=ls
 
 $(OUT): $(FILES)
 	mkdir -p bin

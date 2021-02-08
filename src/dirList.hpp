@@ -7,9 +7,24 @@
 #include <iostream>
 #include <filesystem>
 #include <vector>
+#include <sstream>
 #include <unistd.h>
 #include "include/rang.hpp"
 #include "include/rang-colorblind.hpp"
+
+#ifdef _WIN32
+	#include <windows.h>
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+    bool _ = GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    int termX = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    int termY = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
+	#include <sys/ioctl.h>
+	struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+	int termX = w.ws_col;
+	int termY = w.ws_row;
+#endif
 
 namespace fs = std::filesystem;
 
@@ -118,10 +133,49 @@ int largest(std::vector<int> arr)
     return max; 
 } 
 
-void listDir(std::string path, bool p, bool s, bool b) {
+void listDir(std::string path, bool p, bool s, bool b, bool v) {
 
 	std::vector<int> names;
 	std::vector<int> sizes;
+
+	#ifdef _WIN32
+		std::vector<std::string> executableExtensions{
+			".bat",
+			".bin",
+			".cmd",
+			".com",
+			".cpl",
+			".exe",
+			".gadget",
+			".inf1",
+			".ins",
+			".inx",
+			".isu",
+			".job",
+			".jse",
+			".msc",
+			".msi",
+			".msp",
+			".mst",
+			".paf",
+			".pif",
+			".ps1",
+			".reg",
+			".rgs",
+			".scr",
+			".sct",
+			".shb",
+			".shs",
+			".u3p",
+			".vb",
+			".vbe",
+			".vbs",
+			".vbscript",
+			".ws",
+			".wsf",
+			".wsh"
+		};
+	#endif
 
 	for (const auto & entry : fs::directory_iterator(path)){
 		std::string file = entry.path().generic_string();
@@ -136,47 +190,133 @@ void listDir(std::string path, bool p, bool s, bool b) {
 	}
 
 	maxfilename = largest(names);
-	maxsize = largest(names);
+	maxsize = largest(sizes);
+	
+	//listHeaderTemp << "--- " << rang::fgB::blue << "Directory " << rang::fgB::green << "Symlink " << rang::fgB::magenta << "Executable " << rang::fgB::red << "Regular file " << rang::fg::reset << " ---";
 
-	std::cout << "----------" << std::endl;
+	int listHeaderL = 0;
+	int listHeaderR = 0;
+
+
+	if(termX < 49){
+		while(listHeaderL + listHeaderR + 31 < termX) {
+			listHeaderR += 1;
+
+			if(listHeaderL + listHeaderR + 31 < termX) 
+				listHeaderL += 1;
+		}
+
+		std::cout << std::string(listHeaderL, '-') << "------ " << rang::fgB::blue << "Directory " << rang::fgB::green << "Symlink " << rang::fg::reset << "------" << std::string(listHeaderR, '-') << "\n"
+		<< std::string(listHeaderL, '-') << "--- " << rang::fgB::magenta << "Executable " << rang::fgB::red << "Regular file " << rang::fg::reset << "---" << std::string(listHeaderR, '-') << std::endl;
+	}
+	else {
+		while(listHeaderL + listHeaderR + 49 < termX) {
+			listHeaderR += 1;
+
+			if(listHeaderL + listHeaderR + 49 < termX) 
+				listHeaderL += 1;
+		}
+
+		std::cout << std::string(listHeaderL, '-') << "--- " << rang::fgB::blue << "Directory " << rang::fgB::green << "Symlink " << rang::fgB::magenta << "Executable " << rang::fgB::red << "Regular file " << rang::fg::reset << "---" << std::string(listHeaderR, '-') << std::endl;
+	}
+
+	if(v) {
+		std::cout << "Left Header Padding: " << listHeaderL << "\n";
+		std::cout << "Right Header Padding: " << listHeaderR << "\n";
+		std::cout << "Got Term Width: " << termX << "\n";
+	}
+
 	for (const auto & entry : fs::directory_iterator(path)){
 		std::string file = entry.path().generic_string();
 		file.replace(0, path.length()+1, "");
 		file.append(maxfilename - std::max((int)file.length(), 0), ' ');
 
+		std::string ext = entry.path().extension().string();
+
+		std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
+		
 		if(b){
 			if(entry.is_directory()){
 				file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
 				std::cout << rangcolorblind::fgB::blue << file << rangcolorblind::fg::reset;
-			} else if(access(entry.path().c_str(), X_OK) != -1){
+			}  
+			else if(entry.is_symlink() || ext == ".lnk"){
 				sl size = parseSize(entry.file_size(), s);
-				std::cout << rangcolorblind::fgB::magenta << file << rangcolorblind::fg::reset << " - " << size.size << rangcolorblind::fgB::red << size.label << rangcolorblind::fg::reset;
-			} else if(entry.is_regular_file()){
+				file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
+				std::cout << rangcolorblind::fgB::green << file << rangcolorblind::fg::reset << " - " << size.size << rangcolorblind::fgB::red << size.label << rangcolorblind::fg::reset;
+			} 
+			#ifdef _WIN32
+				else if (std::find(std::begin(executableExtensions), std::end(executableExtensions), ext) != std::end(executableExtensions)){
+					sl size = parseSize(entry.file_size(), s);
+					std::cout << rangcolorblind::fgB::magenta << file << rangcolorblind::fg::reset << " - " << size.size << rangcolorblind::fgB::red << size.label << rangcolorblind::fg::reset;
+				} 
+			#else
+				else if(access((char*)entry.path().c_str(), X_OK) != -1){
+					sl size = parseSize(entry.file_size(), s);
+					std::cout << rangcolorblind::fgB::magenta << file << rangcolorblind::fg::reset << " - " << size.size << rangcolorblind::fgB::red << size.label << rangcolorblind::fg::reset;
+				} 
+			#endif
+			else if(entry.is_regular_file()){
 				sl size = parseSize(entry.file_size(), s);
 				std::cout << rangcolorblind::fgB::red << file << rangcolorblind::fg::reset << " - " << size.size << rangcolorblind::fgB::red << size.label << rangcolorblind::fg::reset;
+			}
+			else {
+				sl size = parseSize(entry.file_size(), s);
+				std::cout << rang::fg::reset << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
 			}
 		}
 		else {
 			if(entry.is_directory()){
 				file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
 				std::cout << rang::fgB::blue << file << rang::fg::reset;
-			} else if(access(entry.path().c_str(), X_OK) != -1){
+			} 
+			else if(entry.is_symlink() || ext == ".lnk"){
 				sl size = parseSize(entry.file_size(), s);
-				std::cout << rang::fgB::magenta << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
-			} else if(entry.is_regular_file()){
+				file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
+				std::cout << rang::fgB::green << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
+			} 
+			#ifdef _WIN32
+				else if (std::find(std::begin(executableExtensions), std::end(executableExtensions), ext) != std::end(executableExtensions)){
+					sl size = parseSize(entry.file_size(), s);
+					std::cout << rang::fgB::magenta << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
+				} 
+			#else
+				else if(access((char*)entry.path().c_str(), X_OK) != -1){
+					sl size = parseSize(entry.file_size(), s);
+					std::cout << rang::fgB::magenta << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
+				} 
+			#endif
+			else if(entry.is_regular_file()){
 				sl size = parseSize(entry.file_size(), s);
 				std::cout << rang::fgB::red << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
 			}
+			else {
+				sl size = parseSize(entry.file_size(), s);
+				std::cout << rang::fg::reset << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
+			}
 		}
 
-		if(p) {
+		if(p && !entry.is_directory()) {
+			sl size = parseSize(entry.file_size(), s);
+			if (size.size.length() == maxsize){
+				std::cout << "-";
+			} else {
+				std::cout << " -";
+			}
+			if(access((char*)entry.path().c_str(), R_OK) != -1) std::cout << " Read";
+			if(access((char*)entry.path().c_str(), W_OK) != -1) std::cout << " Write";
+
+			#ifdef _WIN32
+				if (std::find(std::begin(executableExtensions), std::end(executableExtensions), ext) != std::end(executableExtensions)) std::cout << " Execute";
+			#else
+				if(access((char*)entry.path().c_str(), X_OK) != -1) std::cout << " Execute";
+			#endif
+		} else if (p) {
 			std::cout << " -";
-			if(access(entry.path().c_str(), R_OK) != -1) std::cout << " Read";
-			if(access(entry.path().c_str(), W_OK) != -1) std::cout << " Write";
-			if(access(entry.path().c_str(), X_OK) != -1) std::cout << " Execute";
-		};
+			if(access((char*)entry.path().c_str(), R_OK) != -1) std::cout << " Read";
+			if(access((char*)entry.path().c_str(), W_OK) != -1) std::cout << " Write";
+		}
 
 		std::cout << std::endl;
 	}
-	std::cout << "----------" << std::endl;
 }
