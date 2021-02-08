@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-I. -std=gnu++17
+CFLAGS=-I. -std=c++17 -s -static -Ofast
 
 FILES=src/main.cpp
 OUT=ls
