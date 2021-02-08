@@ -21,7 +21,7 @@
 #else
 	#include <sys/ioctl.h>
 	struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    bool _ = ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 	int termX = w.ws_col;
 	int termY = w.ws_row;
 #endif
