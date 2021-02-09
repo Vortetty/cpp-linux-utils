@@ -1,14 +1,20 @@
+//stolen from unistd.h
+#define	R_OK	4		/* Test for read permission.  */
+#define	W_OK	2		/* Test for write permission.  */
+#define	X_OK	1		/* Test for execute permission.  */
+#define	F_OK	0		/* Test for existence.  */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
 #include <chrono>
 #include <ctime>
-#include <cmath>
+#include <math.h>
 #include <iostream>
 #include <filesystem>
 #include <vector>
 #include <sstream>
-#include <unistd.h>
+//#include <unistd.h>
 #include "include/rang.hpp"
 #include "include/rang-colorblind.hpp"
 
@@ -110,7 +116,7 @@ sl parseSize(long double B, bool s){
 
     out2.size = out;
 
-    out1.append(std::max(maxsize - (int)out1.length() - (int)out.length(), 0), ' ');
+    out1.append((std::max)(maxsize - (int)out1.length() - (int)out.length(), 0), ' ');
     out2.label = out1;
 
     return out2;
@@ -240,7 +246,7 @@ void listDir(std::string path, bool p, bool s, bool b, bool v) {
     for (const auto & entry : fs::directory_iterator(path)){
         std::string file = entry.path().generic_string();
         file.replace(0, path.length()+1, "");
-        file.append(maxfilename - std::max((int)file.length(), 0), ' ');
+        file.append(maxfilename - (std::max)((int)file.length(), 0), ' ');
 
         std::string ext = entry.path().extension().string();
 
@@ -248,12 +254,12 @@ void listDir(std::string path, bool p, bool s, bool b, bool v) {
         
         if(b){
             if(entry.is_directory()){
-                file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
+                file.append((maxfilename + maxsize) - (std::max)((int)file.length(), 0) + 3, ' ');
                 std::cout << rangcolorblind::fgB::blue << file << rangcolorblind::fg::reset;
             }  
             else if(entry.is_symlink() || ext == ".lnk"){
                 sl size = parseSize(entry.file_size(), s);
-                file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
+                file.append((maxfilename + maxsize) - (std::max)((int)file.length(), 0) + 3, ' ');
                 std::cout << rangcolorblind::fgB::green << file << rangcolorblind::fg::reset << " - " << size.size << rangcolorblind::fgB::red << size.label << rangcolorblind::fg::reset;
             } 
             #ifdef _WIN32
@@ -278,12 +284,12 @@ void listDir(std::string path, bool p, bool s, bool b, bool v) {
         }
         else {
             if(entry.is_directory()){
-                file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
+                file.append((maxfilename + maxsize) - (std::max)((int)file.length(), 0) + 3, ' ');
                 std::cout << rang::fgB::blue << file << rang::fg::reset;
             } 
             else if(entry.is_symlink() || ext == ".lnk"){
                 sl size = parseSize(entry.file_size(), s);
-                file.append((maxfilename + maxsize) - std::max((int)file.length(), 0) + 3, ' ');
+                file.append((maxfilename + maxsize) - (std::max)((int)file.length(), 0) + 3, ' ');
                 std::cout << rang::fgB::green << file << rang::fg::reset << " - " << size.size << rang::fgB::red << size.label << rang::fg::reset;
             } 
             #ifdef _WIN32
