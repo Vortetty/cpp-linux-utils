@@ -13,7 +13,6 @@
 #include <iostream>
 #include <filesystem>
 #include <vector>
-#include <sstream>
 //#include <unistd.h>
 #include "include/rang.hpp"
 #include "include/rang-colorblind.hpp"
