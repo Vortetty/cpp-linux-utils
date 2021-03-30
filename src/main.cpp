@@ -34,7 +34,10 @@ int main(int argc, char *argv[]) {
         ("p,perms", "Used to enable showing file perms, disabled by default as the check is relative to the perms of this file not if you can execute them")
         ("s,si", "Makes filesizes use 1000B per KB instead of 1024, the same thing used by harddrive companies to inflate the size of their drives")
         ("b,colorblind", "Forces usage of colors that makes it easier for the colorblind to see the default theme colors are usually such i cant adjust for monochromats though")
+        ("filename", "Positional for -f to be like ls", cxxopts::value<std::vector<std::string>>())
     ;
+
+    options.parse_positional({"filename"});
 
     auto result = options.parse(argc, argv);
 
@@ -53,6 +56,15 @@ int main(int argc, char *argv[]) {
     bool s = result["si"].as<bool>();
     bool b = result["colorblind"].as<bool>();
     std::string m = result["format"].as<std::string>();
+    
+    if (result.count("filename")){
+        file = "";
+        auto filename = result["filename"].as<std::vector<std::string>>();
+        for (auto str : filename) {
+            file += str + " ";
+        }
+        file.pop_back();
+    }
 
     if(file == ""){
         print("File must be defined with -f <filename>");
