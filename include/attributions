@@ -1,0 +1,3 @@
+- cxxopts for argument parsing (https://github.com/jarro2783/cxxopts) under unlicense option
+- rang for colors (https://github.com/agauniyal/rang) under unlicense, as well as a version modified by me to be friendly to colorblind people
+- filelib by me, same lib as this project (CC-BY)
