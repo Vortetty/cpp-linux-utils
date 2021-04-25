@@ -8,7 +8,7 @@
 <br>
 
 ## LS
----
+
 acts as:
 
 - ls
@@ -18,11 +18,11 @@ acts as:
 <br>
 
 ## PWD
----
+
 say current working directory
 
 <br>
 
 ## TOUCH
----
+
 creates empty file with specified name (if it is valid)
